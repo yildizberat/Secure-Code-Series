@@ -1,0 +1,78 @@
+# 🧵 Secure Coding Series #3: Output Encoding – Escape Before You Display
+
+## 📌 What is Output Encoding?
+
+**Output encoding** means converting user-provided data into a safe format **before displaying it** on a webpage, UI, or any output channel.
+
+The goal is to prevent **malicious content** (like scripts or HTML) from being interpreted as **code**, instead forcing it to be shown as **plain text**.
+
+It is a key defense against:
+
+- Cross-Site Scripting (XSS)
+- HTML/JS injection
+- Broken UI rendering
+
+---
+
+## ⚠️ What Happens Without Output Encoding?
+
+Let’s say a user enters this comment:
+(html)
+<script>alert("Hacked!")</script>
+
+If you display it without encoding:
+
+<div>User says: <script>alert("Hacked!")</script></div>
+
+The browser executes the script → You’ve been XSS’d 💥
+
+If you encode the input before displaying:
+
+<div>User says: &lt;script&gt;alert("Hacked!")&lt;/script&gt;</div>
+
+The browser will now render it as text, not code:
+
+User says: <script>alert("Hacked!")</script>
+
+No alert, no execution, no hack ✅
+
+🔴 Insecure: Python Flask (Jinja2 disabled auto-escaping)
+
+from flask import Flask, render_template_string, request
+
+app = Flask(__name__)
+
+@app.route('/')
+def index():
+    comment = request.args.get("comment", "")
+    # Autoescaping is disabled — this is dangerous
+    return render_template_string("<p>User says: %s</p>" % comment)
+
+🧨 ?comment=<script>alert('XSS')</script> -> XSS
+
+
+✅ Secure: Python Flask (with escaping)
+
+from flask import Flask, render_template_string, request
+import html
+
+app = Flask(__name__)
+
+@app.route('/')
+def index():
+    comment = request.args.get("comment", "")
+    # Manual backend encoding
+    safe_comment = html.escape(comment)
+    return render_template_string("<p>User says: %s</p>" % safe_comment)
+
+output:
+<p>User says: &lt;script&gt;alert('XSS')&lt;/script&gt;</p>
+
+(C#)
+public ActionResult Index(string comment)
+{
+    ViewBag.Comment = comment;
+    return View();
+}
+
+
