@@ -1,0 +1,91 @@
+# 🧵 Secure Coding Series #5: Identity and Session Management – Keeping Track of Who’s Who
+
+## 👥 What Is Identity and Session Management?
+
+This topic covers two essential ideas:
+
+- **Identity management**: Creating, verifying, and managing users' identities
+- **Session management**: Keeping track of a logged-in user’s identity during their time on the site or app
+
+Both are **fundamental to security**. If you can’t properly manage “who is who” and “who is still online”, you expose yourself to:
+
+- Session hijacking
+- Privilege escalation
+- Unauthorized access to sensitive actions
+
+---
+
+## 🧨 Common Vulnerabilities
+
+| Problem                         | Description                                       |
+|---------------------------------|---------------------------------------------------|
+| Insecure session IDs            | Predictable or reused session tokens              |
+| No session expiration           | Sessions remain active indefinitely               |
+| No logout / invalidation        | Users can't truly log out                         |
+| Session fixation                | Attacker sets session ID before login             |
+| Weak session cookie settings    | No `HttpOnly`, `Secure`, or `SameSite` flags      |
+
+---
+
+## ✅ Best Practices for Identity Management
+
+- Assign a **unique identifier (UUID)** for each user
+- Never expose internal user IDs (like DB row IDs) in URLs
+- Use secure, centralized identity providers (OAuth, SSO) when possible
+- Enforce **email verification**, **password reset tokens**, and **MFA**
+- Log identity-related events: logins, role changes, failed attempts
+
+---
+
+## ✅ Best Practices for Session Management
+
+- Use **random, long session tokens**
+- Store session tokens only in **HttpOnly** cookies
+- Set cookie attributes:
+  - `Secure`: only over HTTPS
+  - `HttpOnly`: inaccessible from JS
+  - `SameSite=Strict`: block cross-origin leaks
+- Rotate session tokens after login or privilege change
+- **Invalidate session** on logout or timeout (e.g., 15–30 min idle)
+
+---
+
+## 🧑‍💻 Example: ASP.NET Core Cookie Settings
+
+(csharp)
+services.ConfigureApplicationCookie(options =>
+{
+    options.Cookie.HttpOnly = true;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+    options.Cookie.SameSite = SameSiteMode.Strict;
+    options.ExpireTimeSpan = TimeSpan.FromMinutes(30);
+    options.SlidingExpiration = true;
+});
+
+✅ This setup ensures:
+	•	The cookie is sent over HTTPS only
+	•	Cannot be accessed by client-side scripts
+	•	Will expire after 30 mins of inactivity
+
+🔁 Session Rotation Example (on login)
+
+(C#)
+await HttpContext.SignOutAsync();
+await HttpContext.SignInAsync(userPrincipal);
+
+This kills any old session and starts a new one — preventing session fixation.
+
+(Node.js - javascript)
+
+app.use(session({
+  secret: process.env.SESSION_SECRET,
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    httpOnly: true,
+    secure: true,
+    sameSite: "strict",
+    maxAge: 30 * 60 * 1000 // 30 minutes
+  }
+}));
+
